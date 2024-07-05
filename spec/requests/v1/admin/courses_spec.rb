@@ -7,6 +7,8 @@ RSpec.describe type: :request do
   include CommonHelper
 
   describe "#index" do
+    let(:index_path) { "/api/v1/admin/courses" }
+
     it "lists courses" do
       course1 = create(:course)
       chapter1_of_course1 = create(:chapter, course: course1, position: 0)
@@ -18,7 +20,7 @@ RSpec.describe type: :request do
       chapter3_of_course2 = create(:chapter, course: course2)
       unit1_of_chapter3 = create(:unit, chapter: chapter3_of_course2)
 
-      get v1_admin_courses_url
+      get index_path
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -99,7 +101,7 @@ RSpec.describe type: :request do
     it "paginates courses with per_page" do
       courses = 5.times.map { create(:course) }
 
-      get v1_admin_courses_url(params: { per_page: 2 })
+      get index_path, params: { per_page: 2 }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -123,7 +125,7 @@ RSpec.describe type: :request do
     it "paginates courses with page and per_page" do
       courses = 5.times.map { create(:course) }
 
-      get v1_admin_courses_url(params: { page: 2, per_page: 3 })
+      get index_path, params: { page: 2, per_page: 3 }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -146,11 +148,16 @@ RSpec.describe type: :request do
   end
 
   describe "#show" do
-    it "gets course" do
-      course = create(
+    let(:show_path) { "/api/v1/admin/courses/#{course_id}" }
+    let(:course) do
+      create(
         :course,
         name: "course name", teacher_name: "teacher name", description: "course description"
       )
+    end
+    let(:course_id) { course.id }
+
+    it "gets course" do
       chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
       unit1_of_chapter1 = create(
         :unit,
@@ -169,7 +176,7 @@ RSpec.describe type: :request do
         name: "unit 1", content: "unit 1 content"
       )
 
-      get v1_admin_course_url(course.id)
+      get show_path
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -228,49 +235,53 @@ RSpec.describe type: :request do
       )
     end
 
-    it "responds error when course not found" do
-      get v1_admin_course_url(next_id(Course))
+    context "when course id is invalid" do
+      let(:course_id) { next_id(Course) }
 
-      expect(response).to have_http_status(:not_found)
-      expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+      it "responds error when course not found" do
+        get show_path
+
+        expect(response).to have_http_status(:not_found)
+        expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+      end
     end
   end
 
   describe "#create" do
-    it "creates course" do
-      post v1_admin_courses_url(
-        params: {
-          name: "course name",
-          teacher_name: "teacher name",
-          description: "course description",
-          chapters_attributes: [
-            {
-              name: "chapter 1",
-              units_attributes: [
-                {
-                  name: "unit 1",
-                  description: "unit 1 description",
-                  content: "unit 1 content"
-                },
-                {
-                  name: "unit 2",
-                  description: "unit 2 description",
-                  content: "unit 2 content"
-                }
-              ]
-            },
-            {
-              name: "chapter 2",
-              units_attributes: [
-                {
-                  name: "unit 1",
-                  content: "unit 1 content"
-                }
-              ]
-            }
-          ]
-        }
-      )
+    let(:create_path) { "/api/v1/admin/courses" }
+
+    it "creates course, chapters and units" do
+      post_as_json create_path, params: {
+        name: "course name",
+        teacher_name: "teacher name",
+        description: "course description",
+        chapters_attributes: [
+          {
+            name: "chapter 1",
+            units_attributes: [
+              {
+                name: "unit 1",
+                description: "unit 1 description",
+                content: "unit 1 content"
+              },
+              {
+                name: "unit 2",
+                description: "unit 2 description",
+                content: "unit 2 content"
+              }
+            ]
+          },
+          {
+            name: "chapter 2",
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              }
+            ]
+          }
+        ]
+      }
 
       course = Course.last
       expect(response).to have_http_status(:ok)
@@ -335,20 +346,18 @@ RSpec.describe type: :request do
     end
 
     it "responds error when name is blank" do
-      post v1_admin_courses_url(
-        params: {
-          teacher_name: "teacher name",
-          chapters_attributes: [
-            {
-              units_attributes: [
-                {
-                  content: "unit 1 content"
-                }
-              ]
-            }
-          ]
-        }
-      )
+      post_as_json create_path, params: {
+        teacher_name: "teacher name",
+        chapters_attributes: [
+          {
+            units_attributes: [
+              {
+                content: "unit 1 content"
+              }
+            ]
+          }
+        ]
+      }
 
       expect(response).to have_http_status(:bad_request)
       error_message = json_body.dig(:error, :message)
@@ -358,13 +367,11 @@ RSpec.describe type: :request do
     end
 
     it "responds error when chapters is empty" do
-      post v1_admin_courses_url(
-        params: {
-          name: "course name",
-          teacher_name: "teacher name",
-          description: "course description"
-        }
-      )
+      post_as_json create_path, params: {
+        name: "course name",
+        teacher_name: "teacher name",
+        description: "course description"
+      }
 
       expect(response).to have_http_status(:bad_request)
       expect(json_body.dig(:error, :message)).to include("Chapters can't be empty")
@@ -372,20 +379,45 @@ RSpec.describe type: :request do
   end
 
   describe "#update" do
-    it "updates course" do
-      course = create(
-        :course,
-        name: "old name", teacher_name: "old teacher name", description: "old description"
-      )
+    let(:update_path) { "/api/v1/admin/courses/#{course.id}" }
+    let(:course) { create(:course, name: "course 1") }
 
-      patch v1_admin_course_url(
-        course.id,
-        params: {
-          name: "new name",
-          teacher_name: "new teacher name",
-          description: "new description"
-        }
-      )
+    it "updates course, chapters and units" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+      unit2_of_chapter1 = create(:unit, chapter: chapter1, position: 1, name: "unit 2")
+      chapter2 = create(:chapter, course:, position: 1, name: "chapter 2")
+      unit1_of_chapter2 = create(:unit, chapter: chapter2, name: "unit 1")
+
+      patch_as_json update_path, params: {
+        name: "new course 1",
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            name: "new chapter 1",
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id,
+                name: "unit 1"
+              },
+              {
+                id: unit2_of_chapter1.id,
+                name: "new unit 2"
+              }
+            ]
+          },
+          {
+            id: chapter2.id,
+            name: "chapter 2",
+            units_attributes: [
+              {
+                id: unit1_of_chapter2.id,
+                name: "new unit 1"
+              }
+            ]
+          }
+        ]
+      }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -393,28 +425,368 @@ RSpec.describe type: :request do
           data: {
             id: course.id.to_s,
             attributes: {
-              name: "new name",
-              teacher_name: "new teacher name",
-              description: "new description"
+              name: "new course 1",
+              chapters: [
+                {
+                  id: chapter1.id.to_s,
+                  attributes: {
+                    name: "new chapter 1",
+                    units: [
+                      {
+                        id: unit1_of_chapter1.id.to_s,
+                        attributes: {
+                          name: "unit 1"
+                        }
+                      },
+                      {
+                        id: unit2_of_chapter1.id.to_s,
+                        attributes: {
+                          name: "new unit 2"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  id: chapter2.id.to_s,
+                  attributes: {
+                    name: "chapter 2",
+                    units: [
+                      {
+                        id: unit1_of_chapter2.id.to_s,
+                        attributes: {
+                          name: "new unit 1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           }
         }
       )
-      expect(course.reload).to have_attributes(
-        name: "new name",
-        teacher_name: "new teacher name",
-        description: "new description"
+      expect(course.reload.name).to eq("new course 1")
+      expect(chapter1.reload.name).to eq("new chapter 1")
+      expect(unit2_of_chapter1.reload.name).to eq("new unit 2")
+      expect(unit1_of_chapter2.reload.name).to eq("new unit 1")
+    end
+
+    it "adds chapters and units" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit2_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 2")
+      unit4_of_chapter1 = create(:unit, chapter: chapter1, position: 1, name: "unit 4")
+      chapter3 = create(:chapter, course:, position: 1, name: "chapter 3")
+      unit1_of_chapter3 = create(:unit, chapter: chapter3, name: "unit 1")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              },
+              {
+                id: unit2_of_chapter1.id
+              },
+              {
+                name: "unit 3",
+                content: "unit 3 content"
+              },
+              {
+                id: unit4_of_chapter1.id
+              },
+              {
+                name: "unit 5",
+                content: "unit 5 content"
+              }
+            ]
+          },
+          {
+            name: "chapter 2",
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              }
+            ]
+          },
+          {
+            id: chapter3.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter3.id
+              }
+            ]
+          }
+        ]
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include_json(
+        {
+          data: {
+            id: course.id.to_s,
+            attributes: {
+              chapters: [
+                {
+                  id: chapter1.id.to_s,
+                  attributes: {
+                    units: [
+                      {
+                        attributes: {
+                          name: "unit 1"
+                        }
+                      },
+                      {
+                        id: unit2_of_chapter1.id.to_s,
+                        attributes: {
+                          name: "unit 2"
+                        }
+                      },
+                      {
+                        attributes: {
+                          name: "unit 3"
+                        }
+                      },
+                      {
+                        id: unit4_of_chapter1.id.to_s,
+                        attributes: {
+                          name: "unit 4"
+                        }
+                      },
+                      {
+                        attributes: {
+                          name: "unit 5"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  attributes: {
+                    name: "chapter 2",
+                    units: [
+                      {
+                        attributes: {
+                          name: "unit 1"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  id: chapter3.id.to_s,
+                  attributes: {
+                    name: "chapter 3",
+                    units: [
+                      {
+                        id: unit1_of_chapter3.id.to_s,
+                        attributes: {
+                          name: "unit 1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       )
+      expect(course.chapters.size).to eq(3)
+      expect(course.chapters[0].units.size).to eq(5)
+      expect(chapter3.reload.position).to eq(2)
+      expect(unit2_of_chapter1.reload.position).to eq(1)
+      expect(unit4_of_chapter1.reload.position).to eq(3)
+    end
+
+    it "deletes chapters and units" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+      unit2_of_chapter1 = create(:unit, chapter: chapter1, position: 1, name: "unit 2")
+      chapter2 = create(:chapter, course:, position: 1, name: "chapter 2")
+      unit1_of_chapter2 = create(:unit, chapter: chapter2, name: "unit 1")
+      chapter3 = create(:chapter, course:, position: 2, name: "chapter 3")
+      unit1_of_chapter3 = create(:unit, chapter: chapter3, name: "unit 1")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id,
+                _destroy: true
+              },
+              {
+                id: unit2_of_chapter1.id
+              }
+            ]
+          },
+          {
+            id: chapter2.id,
+            _destroy: true,
+            units_attributes: [
+              {
+                id: unit1_of_chapter2.id
+              }
+            ]
+          },
+          {
+            id: chapter3.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter3.id
+              }
+            ]
+          }
+        ]
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include_json(
+        {
+          data: {
+            id: course.id.to_s,
+            attributes: {
+              chapters: [
+                {
+                  id: chapter1.id.to_s,
+                  attributes: {
+                    units: [
+                      {
+                        id: unit2_of_chapter1.id.to_s
+                      }
+                    ]
+                  }
+                },
+                {
+                  id: chapter3.id.to_s,
+                  attributes: {
+                    units: [
+                      {
+                        id: unit1_of_chapter3.id.to_s
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      )
+      expect(course.chapters.size).to eq(2)
+      expect(course.chapters[0].units.size).to eq(1)
+      expect(Chapter.find_by(id: chapter2.id)).to eq(nil)
+      expect(Unit.find_by(id: unit1_of_chapter1.id)).to eq(nil)
+      expect(Unit.find_by(id: unit1_of_chapter2.id)).to eq(nil)
+      expect(chapter3.reload.position).to eq(1)
+      expect(unit2_of_chapter1.reload.position).to eq(0)
+    end
+
+    it "updates, adds, deletes chapters and units" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+      unit2_of_chapter1 = create(:unit, chapter: chapter1, position: 1, name: "unit 2")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            name: "new chapter 1",
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id,
+                _destroy: true
+              },
+              {
+                id: unit2_of_chapter1.id,
+                name: "new unit 2"
+              },
+              {
+                name: "unit 3",
+                content: "unit 3 content"
+              }
+            ]
+          },
+          {
+            name: "chapter 2",
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              }
+            ]
+          }
+        ]
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include_json(
+        {
+          data: {
+            id: course.id.to_s,
+            attributes: {
+              chapters: [
+                {
+                  id: chapter1.id.to_s,
+                  attributes: {
+                    name: "new chapter 1",
+                    units: [
+                      {
+                        id: unit2_of_chapter1.id.to_s,
+                        attributes: {
+                          name: "new unit 2"
+                        }
+                      },
+                      {
+                        attributes: {
+                          name: "unit 3"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  attributes: {
+                    name: "chapter 2",
+                    units: [
+                      {
+                        attributes: {
+                          name: "unit 1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      )
+      expect(chapter1.reload.name).to eq("new chapter 1")
+      expect(unit2_of_chapter1.reload).to have_attributes(
+        name: "new unit 2",
+        position: 0
+      )
+      expect(course.chapters.size).to eq(2)
+      expect(course.chapters[0].units.size).to eq(2)
     end
   end
 
   describe "#destroy" do
+    let(:destroy_path) { "/api/v1/admin/courses/#{course_id}" }
+    let(:course) { create(:course) }
+    let(:course_id) { course.id }
+
     it "deletes course" do
-      course = create(:course)
       chapter = create(:chapter, course:)
       unit = create(:unit, chapter:)
 
-      delete v1_admin_course_url(course.id)
+      delete destroy_path
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include_json(
@@ -429,11 +801,15 @@ RSpec.describe type: :request do
       expect(Unit.find_by(id: unit.id)).to eq(nil)
     end
 
-    it "responds error when course not found" do
-      delete v1_admin_course_url(next_id(Course))
+    context "when course id is invalid" do
+      let(:course_id) { next_id(Course) }
 
-      expect(response).to have_http_status(:not_found)
-      expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+      it "responds error when course not found" do
+        delete destroy_path
+
+        expect(response).to have_http_status(:not_found)
+        expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+      end
     end
   end
 end

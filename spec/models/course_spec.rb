@@ -45,23 +45,4 @@ RSpec.describe Course, type: :model do
       end.to raise_error(ArgumentError, "Number of chapters units is at most #{Course::MAX_UNITS_NUM}")
     end
   end
-
-  describe "#set_chapters_and_units_position" do
-    subject { course.set_chapters_and_units_position }
-    let(:course) { create(:course) }
-
-    it "set position of chapters and units" do
-      chapter1 = course.chapters.new(name: "chapter 1")
-      chapter1.units.new(name: "unit 1", content: "unit 1 content")
-      chapter1.units.new(name: "unit 2", content: "unit 2 content")
-      course.chapters.new(name: "chapter 2")
-
-      subject
-
-      expect(course.chapters[0].position).to eq(0)
-      expect(course.chapters[1].position).to eq(1)
-      expect(course.chapters[0].units[0].position).to eq(0)
-      expect(course.chapters[0].units[1].position).to eq(1)
-    end
-  end
 end

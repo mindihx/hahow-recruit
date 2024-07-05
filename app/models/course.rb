@@ -19,13 +19,4 @@ class Course < ApplicationRecord
       raise ArgumentError, "Number of chapters units is at most #{MAX_UNITS_NUM}" if chapter.units.size > MAX_UNITS_NUM
     end
   end
-
-  def set_chapters_and_units_position
-    chapters.each_with_index do |chapter, chapter_idx|
-      chapter.position = chapter_idx
-      chapter.units.each_with_index do |unit, unit_idx|
-        unit.position = unit_idx
-      end
-    end
-  end
 end
