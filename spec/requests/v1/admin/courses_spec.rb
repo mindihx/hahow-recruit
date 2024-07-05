@@ -232,6 +232,7 @@ RSpec.describe type: :request do
       get v1_admin_course_url(next_id(Course))
 
       expect(response).to have_http_status(:not_found)
+      expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
     end
   end
 
@@ -241,7 +242,33 @@ RSpec.describe type: :request do
         params: {
           name: "course name",
           teacher_name: "teacher name",
-          description: "course description"
+          description: "course description",
+          chapters_attributes: [
+            {
+              name: "chapter 1",
+              units_attributes: [
+                {
+                  name: "unit 1",
+                  description: "unit 1 description",
+                  content: "unit 1 content"
+                },
+                {
+                  name: "unit 2",
+                  description: "unit 2 description",
+                  content: "unit 2 content"
+                }
+              ]
+            },
+            {
+              name: "chapter 2",
+              units_attributes: [
+                {
+                  name: "unit 1",
+                  content: "unit 1 content"
+                }
+              ]
+            }
+          ]
         }
       )
 
@@ -254,11 +281,93 @@ RSpec.describe type: :request do
             attributes: {
               name: "course name",
               teacher_name: "teacher name",
-              description: "course description"
+              description: "course description",
+              chapters: [
+                {
+                  id: course.chapters[0].id.to_s,
+                  attributes: {
+                    name: "chapter 1",
+                    units: [
+                      {
+                        id: course.chapters[0].units[0].id.to_s,
+                        attributes: {
+                          name: "unit 1",
+                          description: "unit 1 description",
+                          content: "unit 1 content"
+                        }
+                      },
+                      {
+                        id: course.chapters[0].units[1].id.to_s,
+                        attributes: {
+                          name: "unit 2",
+                          description: "unit 2 description",
+                          content: "unit 2 content"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  id: course.chapters[1].id.to_s,
+                  attributes: {
+                    name: "chapter 2",
+                    units: [
+                      {
+                        id: course.chapters[1].units[0].id.to_s,
+                        attributes: {
+                          name: "unit 1",
+                          description: nil,
+                          content: "unit 1 content"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           }
         }
       )
+      expect(course.chapters[0].position).to eq(0)
+      expect(course.chapters[1].position).to eq(1)
+      expect(course.chapters[0].units[0].position).to eq(0)
+      expect(course.chapters[0].units[1].position).to eq(1)
+    end
+
+    it "responds error when name is blank" do
+      post v1_admin_courses_url(
+        params: {
+          teacher_name: "teacher name",
+          chapters_attributes: [
+            {
+              units_attributes: [
+                {
+                  content: "unit 1 content"
+                }
+              ]
+            }
+          ]
+        }
+      )
+
+      expect(response).to have_http_status(:bad_request)
+      error_message = json_body.dig(:error, :message)
+      expect(error_message).to include("Name can't be blank")
+      expect(error_message).to include("Chapters name can't be blank")
+      expect(error_message).to include("Chapters units name can't be blank")
+    end
+
+    it "responds error when chapters is empty" do
+      post v1_admin_courses_url(
+        params: {
+          name: "course name",
+          teacher_name: "teacher name",
+          description: "course description"
+        }
+      )
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json_body.dig(:error, :message)).to include("Chapters can't be empty")
     end
   end
 
@@ -302,6 +411,8 @@ RSpec.describe type: :request do
   describe "#destroy" do
     it "deletes course" do
       course = create(:course)
+      chapter = create(:chapter, course:)
+      unit = create(:unit, chapter:)
 
       delete v1_admin_course_url(course.id)
 
@@ -314,6 +425,15 @@ RSpec.describe type: :request do
         }
       )
       expect(Course.find_by(id: course.id)).to eq(nil)
+      expect(Chapter.find_by(id: chapter.id)).to eq(nil)
+      expect(Unit.find_by(id: unit.id)).to eq(nil)
+    end
+
+    it "responds error when course not found" do
+      delete v1_admin_course_url(next_id(Course))
+
+      expect(response).to have_http_status(:not_found)
+      expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
     end
   end
 end

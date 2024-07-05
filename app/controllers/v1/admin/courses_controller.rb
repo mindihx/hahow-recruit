@@ -21,7 +21,12 @@ module V1
       end
 
       def create
-        course = Course.create!(course_params)
+        course = Course.new
+        course.assign_attributes(course_params)
+        course.check_chapters_and_units_num
+        course.set_chapters_and_units_position
+        course.save!
+
         render json: ::Admin::CourseSerializer.new(course).serializable_hash
       end
 
@@ -40,7 +45,13 @@ module V1
       private
 
       def course_params
-        params.permit(:name, :teacher_name, :description)
+        params.permit(
+          :name, :teacher_name, :description,
+          chapters_attributes: [
+            :name,
+            { units_attributes: %i[name description content] }
+          ]
+        )
       end
     end
   end
