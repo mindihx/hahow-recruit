@@ -4,8 +4,15 @@ module V1
   module Admin
     class CoursesController < ApplicationController
       def index
-        courses = Course.all.order(:id)
-        render json: ::Admin::CourseSerializer.new(courses).serializable_hash
+        courses = Course.includes(chapters: :units)
+                        .all
+                        .order(id: :desc)
+                        .page(params[:page]).per(params[:per_page])
+        options = {
+          meta: { total_pages: courses.total_pages },
+          params: { hide_detail: true }
+        }
+        render json: ::Admin::CourseSerializer.new(courses, options).serializable_hash
       end
 
       def show

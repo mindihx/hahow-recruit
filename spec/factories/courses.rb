@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :course do
-    name { Faker::Name.name }
-    teacher_name { Faker::Name.name }
+    name { "course name" }
+    teacher_name { "teacher name" }
   end
 end

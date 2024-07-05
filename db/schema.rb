@@ -10,9 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_04_022103) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_05_013344) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "chapters", force: :cascade do |t|
+    t.bigint "course_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_chapters_on_course_id"
+  end
 
   create_table "courses", force: :cascade do |t|
     t.string "name", null: false
@@ -22,4 +31,17 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_04_022103) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "units", force: :cascade do |t|
+    t.bigint "chapter_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.text "content", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chapter_id"], name: "index_units_on_chapter_id"
+  end
+
+  add_foreign_key "chapters", "courses"
+  add_foreign_key "units", "chapters"
 end
