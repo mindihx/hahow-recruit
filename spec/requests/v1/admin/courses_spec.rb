@@ -95,7 +95,7 @@ RSpec.describe type: :request do
       )
       json_body = json_body()
       expect(json_body[:data].size).to eq(2)
-      expect(json_body.dig(:data, 0, :attributes).key?(:description)).to eq(false)
+      expect(json_body.dig(:data, 0, :attributes).key?(:description)).to be(false)
     end
 
     it "paginates courses with per_page" do
@@ -680,9 +680,9 @@ RSpec.describe type: :request do
       )
       expect(course.chapters.size).to eq(2)
       expect(course.chapters[0].units.size).to eq(1)
-      expect(Chapter.find_by(id: chapter2.id)).to eq(nil)
-      expect(Unit.find_by(id: unit1_of_chapter1.id)).to eq(nil)
-      expect(Unit.find_by(id: unit1_of_chapter2.id)).to eq(nil)
+      expect(Chapter.find_by(id: chapter2.id)).to be_nil
+      expect(Unit.find_by(id: unit1_of_chapter1.id)).to be_nil
+      expect(Unit.find_by(id: unit1_of_chapter2.id)).to be_nil
       expect(chapter3.reload.position).to eq(1)
       expect(unit2_of_chapter1.reload.position).to eq(0)
     end
@@ -855,7 +855,7 @@ RSpec.describe type: :request do
             id: chapter1.id,
             units_attributes: [
               {
-                id: unit1_of_chapter2.id,
+                id: unit1_of_chapter2.id
               }
             ]
           },
@@ -863,10 +863,10 @@ RSpec.describe type: :request do
             id: chapter2.id,
             units_attributes: [
               {
-                id: unit1_of_chapter1.id,
+                id: unit1_of_chapter1.id
               }
             ]
-          },
+          }
         ]
       }
 
@@ -894,9 +894,9 @@ RSpec.describe type: :request do
           }
         }
       )
-      expect(Course.find_by(id: course.id)).to eq(nil)
-      expect(Chapter.find_by(id: chapter.id)).to eq(nil)
-      expect(Unit.find_by(id: unit.id)).to eq(nil)
+      expect(Course.find_by(id: course.id)).to be_nil
+      expect(Chapter.find_by(id: chapter.id)).to be_nil
+      expect(Unit.find_by(id: unit.id)).to be_nil
     end
 
     context "when course id does not exist" do

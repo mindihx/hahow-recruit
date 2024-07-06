@@ -17,7 +17,7 @@ module ExceptionHandler
     end
 
     def respond_error(error, status)
-      render json: error_object(error), status: status
+      render json: error_object(error), status:
     end
 
     def respond_not_found(error)

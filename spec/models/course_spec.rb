@@ -4,18 +4,19 @@ require "rails_helper"
 
 RSpec.describe Course, type: :model do
   describe "#check_chapters_and_units_num" do
-    subject { course.check_chapters_and_units_num }
+    subject(:check_chapters_and_units_num) { course.check_chapters_and_units_num }
+
     let(:course) { create(:course) }
 
     it "doesn't raise error when valid" do
       chapter = create(:chapter, course:)
       _unit = create(:unit, chapter:)
 
-      expect { subject }.not_to raise_error
+      expect { check_chapters_and_units_num }.not_to raise_error
     end
 
     it "raises error when no chapters" do
-      expect { subject }.to raise_error(ArgumentError, "Chapters can't be empty")
+      expect { check_chapters_and_units_num }.to raise_error(ArgumentError, "Chapters can't be empty")
     end
 
     it "raises error when too many chapters" do
@@ -24,13 +25,15 @@ RSpec.describe Course, type: :model do
         create(:chapter, course:)
       end
 
-      expect { subject }.to raise_error(ArgumentError, "Number of chapters is at most #{Course::MAX_CHAPTERS_NUM}")
+      expect { check_chapters_and_units_num }.to raise_error(
+        ArgumentError, "Number of chapters is at most #{Course::MAX_CHAPTERS_NUM}"
+      )
     end
 
     it "raises error when no units" do
       create(:chapter, course:)
 
-      expect { subject }.to raise_error(ArgumentError, "Chapters units can't be empty")
+      expect { check_chapters_and_units_num }.to raise_error(ArgumentError, "Chapters units can't be empty")
     end
 
     it "raises error when too many units" do
@@ -41,7 +44,7 @@ RSpec.describe Course, type: :model do
       end
 
       expect do
-        subject
+        check_chapters_and_units_num
       end.to raise_error(ArgumentError, "Number of chapters units is at most #{Course::MAX_UNITS_NUM}")
     end
   end

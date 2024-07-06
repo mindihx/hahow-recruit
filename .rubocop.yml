@@ -1,3 +1,7 @@
+require:
+  - rubocop-rails
+  - rubocop-rspec
+
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
@@ -11,3 +15,9 @@ Metrics/BlockLength:
 Metrics/MethodLength:
   Exclude:
     - "db/migrate/*.rb"
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
