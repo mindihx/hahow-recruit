@@ -16,7 +16,7 @@ RSpec.describe type: :request do
       unit2_of_chapter1 = create(:unit, chapter: chapter1_of_course1, position: 1)
       chapter2_of_course1 = create(:chapter, course: course1, position: 1)
       unit1_of_chapter2 = create(:unit, chapter: chapter2_of_course1)
-      course2 = create(:course, description: "course2 description")
+      course2 = create(:course, description: "course 2 description")
       chapter3_of_course2 = create(:chapter, course: course2)
       unit1_of_chapter3 = create(:unit, chapter: chapter3_of_course2)
 
@@ -215,7 +215,7 @@ RSpec.describe type: :request do
                 {
                   id: chapter2.id.to_s,
                   attributes: {
-                    name: chapter2.name,
+                    name: "chapter 2",
                     units: [
                       {
                         id: unit1_of_chapter2.id.to_s,
@@ -235,10 +235,10 @@ RSpec.describe type: :request do
       )
     end
 
-    context "when course id is invalid" do
+    context "when course id does not exist" do
       let(:course_id) { next_id(Course) }
 
-      it "responds error when course not found" do
+      it "responds error" do
         get show_path
 
         expect(response).to have_http_status(:not_found)
@@ -366,7 +366,7 @@ RSpec.describe type: :request do
       expect(error_message).to include("Chapters units name can't be blank")
     end
 
-    it "responds error when chapters is empty" do
+    it "responds error when no chapters" do
       post_as_json create_path, params: {
         name: "course name",
         teacher_name: "teacher name",
@@ -776,7 +776,7 @@ RSpec.describe type: :request do
       expect(course.chapters[0].units.size).to eq(2)
     end
 
-    it "responds error when add too much chapters" do
+    it "responds error when add too many chapters" do
       stub_const("Course::MAX_CHAPTERS_NUM", 2)
       chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
       unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
@@ -842,6 +842,37 @@ RSpec.describe type: :request do
       expect(response).to have_http_status(:bad_request)
       expect(response_error_message).to include("Chapters units can't be empty")
     end
+
+    it "responds error when chapter and unit not match" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+      chapter2 = create(:chapter, course:, position: 0, name: "chapter 2")
+      unit1_of_chapter2 = create(:unit, chapter: chapter2, position: 0, name: "unit 1")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter2.id,
+              }
+            ]
+          },
+          {
+            id: chapter2.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id,
+              }
+            ]
+          },
+        ]
+      }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response_error_message).to include("Couldn't find Unit")
+    end
   end
 
   describe "#destroy" do
@@ -868,10 +899,10 @@ RSpec.describe type: :request do
       expect(Unit.find_by(id: unit.id)).to eq(nil)
     end
 
-    context "when course id is invalid" do
+    context "when course id does not exist" do
       let(:course_id) { next_id(Course) }
 
-      it "responds error when course not found" do
+      it "responds error" do
         delete destroy_path
 
         expect(response).to have_http_status(:not_found)

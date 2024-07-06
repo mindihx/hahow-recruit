@@ -84,10 +84,10 @@ module V1
           next unless chapter_attributes[:units_attributes]
 
           unit_idx = 0
-          chapter_attributes[:units_attributes].each do |units_attributes|
-            next if units_attributes[:_destroy]
+          chapter_attributes[:units_attributes].each do |unit_attributes|
+            next if unit_attributes[:_destroy]
 
-            units_attributes[:position] = unit_idx
+            unit_attributes[:position] = unit_idx
             unit_idx += 1
           end
         end

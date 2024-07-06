@@ -14,11 +14,11 @@ RSpec.describe Course, type: :model do
       expect { subject }.not_to raise_error
     end
 
-    it "raises error when chapters is empty" do
+    it "raises error when no chapters" do
       expect { subject }.to raise_error(ArgumentError, "Chapters can't be empty")
     end
 
-    it "raises error when chapters is too much" do
+    it "raises error when too many chapters" do
       stub_const("Course::MAX_CHAPTERS_NUM", 2)
       (Course::MAX_CHAPTERS_NUM + 1).times do
         create(:chapter, course:)
@@ -27,13 +27,13 @@ RSpec.describe Course, type: :model do
       expect { subject }.to raise_error(ArgumentError, "Number of chapters is at most #{Course::MAX_CHAPTERS_NUM}")
     end
 
-    it "raises error when units is empty" do
+    it "raises error when no units" do
       create(:chapter, course:)
 
       expect { subject }.to raise_error(ArgumentError, "Chapters units can't be empty")
     end
 
-    it "raises error when chapters is too much" do
+    it "raises error when too many units" do
       stub_const("Course::MAX_UNITS_NUM", 2)
       chapter = create(:chapter, course:)
       (Course::MAX_UNITS_NUM + 1).times do

@@ -16,12 +16,16 @@ module ExceptionHandler
       }
     end
 
+    def respond_error(error, status)
+      render json: error_object(error), status: status
+    end
+
     def respond_not_found(error)
-      render json: error_object(error), status: :not_found
+      respond_error(error, :not_found)
     end
 
     def respond_bad_request(error)
-      render json: error_object(error), status: :bad_request
+      respond_error(error, :bad_request)
     end
   end
 end
