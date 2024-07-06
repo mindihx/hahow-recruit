@@ -5,6 +5,10 @@ module RequestHelper
     JSON.parse(response.body, symbolize_names: true)
   end
 
+  def response_error_message
+    json_body.dig(:error, :message)
+  end
+
   def post_as_json(*args, **kwargs)
     kwargs[:as] = :json
     post(*args, **kwargs)

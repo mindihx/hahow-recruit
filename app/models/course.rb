@@ -10,13 +10,19 @@ class Course < ApplicationRecord
   MAX_CHAPTERS_NUM = 100
   MAX_UNITS_NUM = 100
 
+  # rubocop:disable Metrics/CyclomaticComplexity
   def check_chapters_and_units_num
-    raise ArgumentError, "Chapters can't be empty" if chapters.empty?
-    raise ArgumentError, "Number of chapters is at most #{MAX_CHAPTERS_NUM}" if chapters.size > MAX_CHAPTERS_NUM
+    chapters_to_check = chapters.reject(&:_destroy)
+    raise ArgumentError, "Chapters can't be empty" if chapters_to_check.empty?
+    if chapters_to_check.size > MAX_CHAPTERS_NUM
+      raise ArgumentError, "Number of chapters is at most #{MAX_CHAPTERS_NUM}"
+    end
 
-    chapters.each do |chapter|
-      raise ArgumentError, "Chapters units can't be empty" if chapter.units.empty?
-      raise ArgumentError, "Number of chapters units is at most #{MAX_UNITS_NUM}" if chapter.units.size > MAX_UNITS_NUM
+    chapters_to_check.each do |chapter|
+      units_to_check = chapter.units.reject(&:_destroy)
+      raise ArgumentError, "Chapters units can't be empty" if units_to_check.empty?
+      raise ArgumentError, "Number of chapters units is at most #{MAX_UNITS_NUM}" if units_to_check.size > MAX_UNITS_NUM
     end
   end
+  # rubocop:enable Metrics/CyclomaticComplexity
 end

@@ -242,7 +242,7 @@ RSpec.describe type: :request do
         get show_path
 
         expect(response).to have_http_status(:not_found)
-        expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+        expect(response_error_message).to include("Couldn't find Course")
       end
     end
   end
@@ -360,7 +360,7 @@ RSpec.describe type: :request do
       }
 
       expect(response).to have_http_status(:bad_request)
-      error_message = json_body.dig(:error, :message)
+      error_message = response_error_message
       expect(error_message).to include("Name can't be blank")
       expect(error_message).to include("Chapters name can't be blank")
       expect(error_message).to include("Chapters units name can't be blank")
@@ -374,7 +374,7 @@ RSpec.describe type: :request do
       }
 
       expect(response).to have_http_status(:bad_request)
-      expect(json_body.dig(:error, :message)).to include("Chapters can't be empty")
+      expect(response_error_message).to include("Chapters can't be empty")
     end
   end
 
@@ -775,6 +775,73 @@ RSpec.describe type: :request do
       expect(course.chapters.size).to eq(2)
       expect(course.chapters[0].units.size).to eq(2)
     end
+
+    it "responds error when add too much chapters" do
+      stub_const("Course::MAX_CHAPTERS_NUM", 2)
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id
+              }
+            ]
+          },
+          {
+            name: "chapter 2",
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              }
+            ]
+          },
+          {
+            name: "chapter 3",
+            units_attributes: [
+              {
+                name: "unit 1",
+                content: "unit 1 content"
+              }
+            ]
+          }
+        ]
+      }
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response_error_message).to include("Number of chapters is at most 2")
+    end
+
+    it "responds error when delete all units in chapter" do
+      chapter1 = create(:chapter, course:, position: 0, name: "chapter 1")
+      unit1_of_chapter1 = create(:unit, chapter: chapter1, position: 0, name: "unit 1")
+      unit2_of_chapter1 = create(:unit, chapter: chapter1, position: 1, name: "unit 2")
+
+      patch_as_json update_path, params: {
+        chapters_attributes: [
+          {
+            id: chapter1.id,
+            units_attributes: [
+              {
+                id: unit1_of_chapter1.id,
+                _destroy: true
+              },
+              {
+                id: unit2_of_chapter1.id,
+                _destroy: true
+              }
+            ]
+          }
+        ]
+      }
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response_error_message).to include("Chapters units can't be empty")
+    end
   end
 
   describe "#destroy" do
@@ -808,7 +875,7 @@ RSpec.describe type: :request do
         delete destroy_path
 
         expect(response).to have_http_status(:not_found)
-        expect(json_body.dig(:error, :message)).to include("Couldn't find Course")
+        expect(response_error_message).to include("Couldn't find Course")
       end
     end
   end

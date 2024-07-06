@@ -32,8 +32,10 @@ module V1
       def update
         course = Course.find(params[:id])
         course.assign_attributes(update_params)
+        course.check_chapters_and_units_num
         course.save!
 
+        course = Course.includes(chapters: :units).find(params[:id])
         render json: ::Admin::CourseSerializer.new(course).serializable_hash
       end
 
