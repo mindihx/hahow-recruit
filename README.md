@@ -285,16 +285,16 @@ Rails 程式碼的 linter 及 formatter，可協助保持程式碼風格一致�
 
 ### 選擇要用哪個服務部署
 
-因為 Heroku 沒有免費的服務了所以稍微 survey 了其他可用的，本來試用了 Koyeb 發現它的 db 只能用 50 小時，後來才改用 Render。
+因為 Heroku 沒有免費的服務了所以稍微 survey 其他可用的，本來試用了 Koyeb 發現它的 db 只能用 50 小時，後來才改用 Render。
 
-### 修正了以下 docker build 問題
+### 修正以下 docker build 問題
 
 - Ruby 3 的一些 dependency 問題但沒有細看，在 Gemfile 裡加上 `gem "net-pop", github: "ruby/net-pop"` 可解決。
 - 沒有安裝 libpg-dev 造成的安裝錯誤，在 apt-get install 加上 libpg-dev。
 - 因為把 active storage 拿掉所以就不能做 `rails assets:precompile` 且 [config/environments/production.rb](config/environments/production.rb) 也要註解掉 `config.active_storage.service = :local`。
 - 因為把 action cable 拿掉所以需要移除相關檔案 `app/channels/application_cable/channel.rb`、`app/channels/application_cable/connection.rb`。
 
-### 修正了以下執行問題
+### 修正以下執行問題
 
 - 沒有設定 RAILS_MASTER_KEY，之前沒有使用過這個機制，所以看了一下要從哪裡取得 master key。
 - POST request 沒有給 CSRF token 而不能執行，將 `ApplicationController` 改成繼承 `ActionController::API` 而不是 `ActionController::Base`。也可以用其他方法例如加上 `skip_before_action :verify_authenticity_token`。

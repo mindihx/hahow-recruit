@@ -16,7 +16,7 @@ module V1
       end
 
       def show
-        course = Course.find(params[:id])
+        course = find_course
         render json: ::Admin::CourseSerializer.new(course).serializable_hash
       end
 
@@ -30,22 +30,26 @@ module V1
       end
 
       def update
-        course = Course.find(params[:id])
+        course = find_course
         course.assign_attributes(update_params)
         course.check_chapters_and_units_num
         course.save!
 
-        course = Course.includes(chapters: :units).find(params[:id])
+        course = find_course
         render json: ::Admin::CourseSerializer.new(course).serializable_hash
       end
 
       def destroy
-        course = Course.find(params[:id])
+        course = find_course
         course.destroy!
         render json: ::Admin::CourseSerializer.new(course).serializable_hash
       end
 
       private
+
+      def find_course
+        Course.includes(chapters: :units).find(params[:id])
+      end
 
       def create_params
         to_create = params.permit(
